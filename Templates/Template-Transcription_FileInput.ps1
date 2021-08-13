@@ -112,7 +112,7 @@ Function Clear-TransLogs{
   Get-ChildItem $PSScriptRoot -recurse "*$Script:ScriptName.log" -force | Where-Object {$_.lastwritetime -lt (get-date).adddays(-15)} | Remove-Item -force
 }
 
-#& FilePiucker function for selecting input file via explorer window
+#& FilePicker function for selecting input file via explorer window
 Function Get-FilePicker {
   Param ()
   [void] [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
@@ -138,6 +138,35 @@ Function Test-ELog{
   }
   else{
     Write-Host "$Script:Now [INFORMATION] PowerShell Automation Event Log Exists"
+  }
+}
+
+#& TestPath function for testing and creating directories
+Function Invoke-TestPath{
+  [CmdletBinding()]
+  param (
+      #^ Path parameter for testing/creating destination paths
+      [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
+      [String]
+      $ParamPath
+  )
+  Try{
+      # Check to see if the report location exists, if not create it
+      if ((Test-Path -Path $ParamPath -PathType Container) -eq $false){
+          Get-Now
+          Write-Host "$Script:Now [INFORMATION] Destination Path $($ParamPath) does not exist: creating...." -ForegroundColor Magenta -BackgroundColor White
+          New-Item $ParamPath -ItemType Directory | Out-Null
+          Get-Now
+          Write-Verbose "$Script:Now [INFORMATION] Destination Path $($ParamPath) created"
+      }
+  }  
+  Catch{
+      #! Error handling for folder creation 
+      Get-Now
+      Write-Host "$Script:Now [Error] Error creating directories"
+      Write-Host $PSItem.Exception.Message
+      Stop-Transcript
+      Break
   }
 }
 
@@ -169,8 +198,15 @@ Get-Now                                                                         
 Write-Host "$Script:Now [INFORMATION] $Script:File has been selected for processing" -ForegroundColor Magenta
 Write-Host ""
 
+#* Sets Batch Name to be name of the file selected in FilePicker function and uses in destination folder structures
 $BatchNameTemp      = $Script:File.split("\")[-1]
-$Script:BatchName   = $BatchNameTemp.substring(0,($BatchNameTemp.length-4))                         # Uses the filename as the batchname
+$Script:BatchFolder = $BatchNameTemp.substring(0,($BatchNameTemp.length-4))
+$Script:BFolder     = $Script:LogDir + "\" + $Script:BatchFolder
+
+
+# Test and create folder structure
+Invoke-TestPath -ParamPath $Script:LogDir
+Invoke-TestPath -ParamPath $Script:BFolder
 
 # Import CSV
 <#Import-csv $Script:File -Delimiter "," | ForEach-Object {

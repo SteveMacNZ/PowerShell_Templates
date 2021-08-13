@@ -120,6 +120,34 @@ Function Test-ELog{
   }
 }
 
+#& TestPath function for testing and creating directories
+Function Invoke-TestPath{
+  [CmdletBinding()]
+  param (
+      #^ Path parameter for testing/creating destination paths
+      [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
+      [String]
+      $ParamPath
+  )
+  Try{
+      # Check to see if the report location exists, if not create it
+      if ((Test-Path -Path $ParamPath -PathType Container) -eq $false){
+          Get-Now
+          Write-Host "$Script:Now [INFORMATION] Destination Path $($ParamPath) does not exist: creating...." -ForegroundColor Magenta -BackgroundColor White
+          New-Item $ParamPath -ItemType Directory | Out-Null
+          Get-Now
+          Write-Verbose "$Script:Now [INFORMATION] Destination Path $($ParamPath) created"
+      }
+  }  
+  Catch{
+      #! Error handling for folder creation 
+      Get-Now
+      Write-Host "$Script:Now [Error] Error creating directories"
+      Write-Host $PSItem.Exception.Message
+      Stop-Transcript
+      Break
+  }
+}
 
 #-----------------------------------------------------------[Execution]------------------------------------------------------------
 <#
@@ -144,6 +172,9 @@ Get-Now
 Write-Host "$Script:Now [INFORMATION] Writing script processing start to PowerShell Automation Event Log"
 Write-EventLog -LogName $E.N -Source $E.S -Message "Started Processing <what is this script>" -EventId $E.G -EntryType $E.I
 
+
+# Test and create folder structure
+# Invoke-TestPath -ParamPath "<path>"
 # Stuff goes here
 
 Write-Output ''                                                                                     # write Line spacer into Transcription file
