@@ -59,6 +59,13 @@ $Script:GUID                = ''                                                
 #^ Use New-Guid cmdlet to generate new script GUID for each version change of the script
 
 #-----------------------------------------------------------[Hash Tables]----------------------------------------------------------
+#* Hash table for Write-Host Errors to be used as spatted
+$cerror = @{ForeGroundColor = "Red"; BackgroundColor = "white"}
+#* Hash table for Write-Host Warnings to be used as spatted
+$cwarning = @{ForeGroundColor = "Magenta"; BackgroundColor = "white"}
+#* Hash table for Write-Host highlighted to be used as spatted
+$chighlight = @{ForeGroundColor = "Blue"; BackgroundColor = "white"}
+
 #* hash table for EventLogs
 $E = @{
   N   = "PowerShell-Automation"                                                                         # Name of Event Log
@@ -108,7 +115,7 @@ Function Get-Now{
 #& Clean up log files in script root older than 15 days
 Function Clear-TransLogs{
   Get-Now
-  Write-Output "$Script:Now - Cleaning up transaction logs over 15 days old"
+  Write-Host "$Script:Now - Cleaning up transaction logs over 15 days old" @cwarning
   Get-ChildItem $PSScriptRoot -recurse "*$Script:ScriptName.log" -force | Where-Object {$_.lastwritetime -lt (get-date).adddays(-15)} | Remove-Item -force
 }
 
@@ -132,7 +139,7 @@ Function Get-FilePicker {
 Function Test-ELog{
   if ([System.Diagnostics.EventLog]::SourceExists($E.N) -eq $False) {
     Get-Now
-    Write-Host "$Script:Now [ERROR] Eventlog does not exist - Please run .\Register-PSAutomation.ps1 and try again"
+    Write-Host "$Script:Now [ERROR] Eventlog does not exist - Please run .\Register-PSAutomation.ps1 and try again" @cerror
     Stop-Transcript
     exit
   }
@@ -154,7 +161,7 @@ Function Invoke-TestPath{
       # Check to see if the report location exists, if not create it
       if ((Test-Path -Path $ParamPath -PathType Container) -eq $false){
           Get-Now
-          Write-Host "$Script:Now [INFORMATION] Destination Path $($ParamPath) does not exist: creating...." -ForegroundColor Magenta -BackgroundColor White
+          Write-Host "$Script:Now [INFORMATION] Destination Path $($ParamPath) does not exist: creating...." @chighlight
           New-Item $ParamPath -ItemType Directory | Out-Null
           Get-Now
           Write-Verbose "$Script:Now [INFORMATION] Destination Path $($ParamPath) created"
@@ -163,7 +170,7 @@ Function Invoke-TestPath{
   Catch{
       #! Error handling for folder creation 
       Get-Now
-      Write-Host "$Script:Now [Error] Error creating directories"
+      Write-Host "$Script:Now [Error] Error creating directories" @cerror
       Write-Host $PSItem.Exception.Message
       Stop-Transcript
       Break
@@ -172,14 +179,17 @@ Function Invoke-TestPath{
 
 #-----------------------------------------------------------[Execution]------------------------------------------------------------
 <#
+? ---------------------------------------------------------- [NOTES:] -------------------------------------------------------------
 & Best veiwed and edited with Microsoft Visual Studio Code with colorful comments extension
 ^ Transcription logging formatting use Get-Now before write-host to return current timestamp into $Scipt:Now variable
   Write-Host "$Script:Now [INFORMATION] Information Message"
-  Write-Host "$Script:Now [WARNING] Warning Message"
-  Write-Host "$Script:Now [ERROR] Error Message"
+  Write-Host "$Script:Now [INFORMATION] Highlighted Information Message" @chighlight
+  Write-Host "$Script:Now [WARNING] Warning Message" @cwarning
+  Write-Host "$Script:Now [ERROR] Error Message" @cerror
 
 ^ Eventlog update
   Write-EventLog -LogName $E.[N,A] -Source $E.S -Message "Started Processing <what is this script>" -EventId $E.[G,O,B,1-5] -EntryType $E.[I,W,E]
+? ---------------------------------------------------------------------------------------------------------------------------------
 #>
 
 # Script Execution goes here
@@ -189,13 +199,13 @@ Test-ELog                                                                       
 
 # Write update to PowerShell Automation Event Log
 Get-Now
-Write-Output "$Script:Now [INFORMATION] Writing script processing start to PowerShell Automation Event Log"
+Write-Host "$Script:Now [INFORMATION] Writing script processing start to PowerShell Automation Event Log"
 Write-EventLog -LogName $E.N -Source $E.S -Message "Started Processing <what is this script>" -EventId $E.G -EntryType $E.I
 
 Get-FilePicker                                                                                      # Prompt user for CSV file
 
 Get-Now                                                                                             # Get Current Date Time
-Write-Host "$Script:Now [INFORMATION] $Script:File has been selected for processing" -ForegroundColor Magenta
+Write-Host "$Script:Now [INFORMATION] $Script:File has been selected for processing" @chighlight
 Write-Host ""
 
 #* Sets Batch Name to be name of the file selected in FilePicker function and uses in destination folder structures
@@ -217,7 +227,7 @@ Invoke-TestPath -ParamPath $Script:BFolder
   }
   Catch {
     Get-Now
-    Write-Host "$Script:Now [ERROR] <what's the error>" -ForegroundColor Red
+    Write-Host "$Script:Now [ERROR] <what's the error>" @cerror
     Write-Host $PSItem.Exception.Message -ForegroundColor RED
     <do other stuff if required>
   }
