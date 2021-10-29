@@ -45,18 +45,33 @@ $ErrorActionPreference = 'SilentlyContinue'
 
 #----------------------------------------------------------[Declarations]----------------------------------------------------------
 
-# Customer Specific
-#$CustName = Read-Host "Enter Customer Short Name (e.g. Cloud Innovation = CINZ)"                # Customer Short Name
+# Script sourced variables for General settings and Registry Operations
+$Script:Date        = Get-Date -Format yyyy-MM-dd                                   # Date format in yyyy-mm-dd
+$Script:File        = ''                                                            # File var for Get-FilePicker Function
+$Script:ScriptName  = 'Invoke-ScriptName'                                           # Script Name used in the Open Dialogue
+#$Script:dest        = $PSScriptRoot                                                 # Destination path - uncomment to use PS script root
+$Script:dest        = "$($env:ProgramData)\What\Path"                               # Destination Path - comment to use PS Script root
+$Script:LogFile     = $Script:dest + "\" + $Script:Date + "_" + $Script:ScriptName + ".log"    # logfile location and name
+$Script:BatchName   = ''                                                            # Batch name variable placeholder
+$Script:CSVFile     = $Script:dest + "\" + $Script:Date + "_" + $Script:ScriptName + "_.csv"   # CSV Export location and name
+$Script:Details     = Get-ComputerInfo                                              # Get Computer Info
+$Script:GUID        = ''                        # Script GUID
+    #^ Use New-Guid cmdlet to generate new script GUID for each version change of the script
+$Script:Version     = '0.0'                                                         # Script Version Number
+$Script:Client      = ''                                                            # Set Client Name - Used in Registry Operations
+$Script:Operation   = 'Install'                                                     # Operations Feild for registry
+$Script:Source      = 'Script'                                                      # Source (Script / MSI / Scheduled Task etc)
+$Script:PackageName = $Script:ScriptName                                            # Packaged Name - Used in Registry Operations (may be same as script name)
+$Script:RegPath     = "HKLM:\Software\$Script:Client\$Script:Source\$Script:PackageName\$Script:Operation"   # Registry Hive Location for Registry Operations
 
-# Script scopped variables
-$Script:Date                = Get-Date -Format yyyy-MM-dd                                               # Date format in yyyymmdd
-$Script:File                = ''                                                                        # File var for Get-FilePicker Function
-$Script:ScriptName          = 'Invoke-ScriptName'                                                       # Script Name used in the Open Dialogue
-$Script:LogFile             = $PSScriptRoot + "\" + $Script:Date + "_" + $Script:ScriptName + ".log"    # logfile location and name
-$Script:BatchName           = ''                                                                        # Batch name variable placeholder
-$Script:CSVFile             = $PSScriptRoot + "\" + $Script:Date + "_" + $Script:ScriptName + "_.csv"   # CSV Export location and name
-$Script:GUID                = ''                                                                        # Script GUID
-#^ Use New-Guid cmdlet to generate new script GUID for each version change of the script
+# Script sourced variables for Task Schedule
+$Script:TaskName    = ''                                                            # Scheduled Task Name
+$Script:TaskDesc    = ''                                                            # Description for Scheduled Task
+$Script:timespan    = New-Timespan -minutes 5                                       # Scheduled Task Timespan
+$Script:triggers    = @()                                                           # Scheduled Task Triggers Array 
+$Script:triggers    += New-ScheduledTaskTrigger -Daily -At 9am                      # Daily at 9 am
+$Script:triggers    += New-ScheduledTaskTrigger -AtLogOn -RandomDelay $timespan     # At Logon with random delay
+$Script:triggers    += New-ScheduledTaskTrigger -AtStartup -RandomDelay $timespan   # At Startup with randon delay
 
 #-----------------------------------------------------------[Hash Tables]----------------------------------------------------------
 #* Hash table for Write-Host Errors to be used as spatted
@@ -109,7 +124,10 @@ Function Start-Logging{
 
 #& Date time formatting for timestamped updated
 Function Get-Now{
-  $Script:Now = (get-date).tostring("[dd/MM HH:mm:ss:ffff]")
+  # PowerShell Method - uncomment below is .NET is unavailable
+  #$Script:Now = (get-date).tostring("[dd/MM HH:mm:ss:ffff]")
+  # .NET Call which is faster than PowerShell Method - comment out below if .NET is unavailable
+  $Script:Now = ([DateTime]::Now).tostring("[dd/MM HH:mm:ss:ffff]")
 }
 
 #& Clean up log files in script root older than 15 days
@@ -174,6 +192,58 @@ Function Invoke-TestPath{
       Write-Host $PSItem.Exception.Message
       Stop-Transcript
       Break
+  }
+}
+
+#& Task Scheduler Function
+Function Register-Task{
+  Get-Now
+  Write-Host "$Script:Now [INFORMATION] <What/Why details here> creating Scheduled Task" 
+  
+  # Check to see if already scheduled
+  $existingTask = Get-ScheduledTask -TaskName $Script:TaskName -ErrorAction SilentlyContinue
+  if ($null -ne $existingTask){
+      Get-Now
+      Write-Host "$Script:Now [INFORMATION] Scheduled task already exists."
+  }
+
+  # Copy myself to a safe place if not already there
+  if (-not (Test-Path "$Script:dest\$Script:ScriptName.ps1")){
+    Get-Now
+    Write-Host "$Script:Now [INFORMATION] Copying Script to $Script:dest\$Script:ScriptName.ps1"
+    Copy-Item $PSCommandPath "$Script:dest\$Script:ScriptName.ps1"
+  }
+
+  # Create the scheduled task action
+  $action = New-ScheduledTaskAction -Execute "Powershell.exe" -Argument "-NoProfile -ExecutionPolicy bypass -WindowStyle Hidden -File $Script:dest\$Script:ScriptName.ps1"
+
+  # Register the scheduled task
+  Register-ScheduledTask -User SYSTEM -Action $action -Trigger $Script:triggers -TaskName $Script:TaskName -Description $Script:TaskDesc -Force
+  Get-Now
+  Write-Host "$Script:Now [INFORMATION] Scheduled task created." 
+}
+
+#& Checks for Scheduled Task and Removes Scheduled Task if successful
+Function Invoke-CheckTask{
+  $TaskExists = Get-ScheduledTask -TaskName $Script:TaskName -ErrorAction SilentlyContinue
+  If ($TaskExists -eq $true){
+    Get-Now
+    Disable-ScheduledTask -TaskName $Script:TaskName -ErrorAction Ignore
+    Unregister-ScheduledTask -TaskName $Script:TaskName -Confirm:$false -ErrorAction Ignore
+    Write-Host "$Script:Now [INFORMATION] Scheduled task unregistered."
+  }
+  else{
+    Get-Now
+    Write-Host "$Script:Now [INFORMATION] Scheduled task does not exist contuining..."
+  }
+}
+
+#& Write Registry Hive
+Function Write-Reg{
+  Get-Now
+  Write-Host "$Script:Now [INFORMATION] Creating Registry Hive: $Script:RegPath"
+  if(!(Test-Path $Script:RegPath)){
+      New-Item -Path $Script:RegPath -Force | Out-Null 
   }
 }
 
