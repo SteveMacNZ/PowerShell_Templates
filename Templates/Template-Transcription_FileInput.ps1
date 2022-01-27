@@ -63,6 +63,8 @@ $Script:Operation   = 'Install'                                                 
 $Script:Source      = 'Script'                                                      # Source (Script / MSI / Scheduled Task etc)
 $Script:PackageName = $Script:ScriptName                                            # Packaged Name - Used in Registry Operations (may be same as script name)
 $Script:RegPath     = "HKLM:\Software\$Script:Client\$Script:Source\$Script:PackageName\$Script:Operation"   # Registry Hive Location for Registry Operations
+$Script:Desc        = "ShortDesc for $Script:Client"
+$Script:Desc2       = "Description of Script"
 
 # Script sourced variables for Task Schedule
 $Script:TaskName    = ''                                                            # Scheduled Task Name
@@ -105,21 +107,39 @@ $E = @{
 
 #& Start Transcriptions
 Function Start-Logging{
-
   try {
-      Stop-Transcript | Out-Null
-  } catch [System.InvalidOperationException] { }                                          # jobs are running
-  $ErrorActionPreference = "Continue"                                                     # Set Error Action Handling
-  Get-Now                                                                                 # Get current date time
-  Start-Transcript -path $Script:LogFile -IncludeInvocationHeader -Append                 # Start Transcription append if log exists
-  Write-Host ''                                                                           # write Line spacer into Transcription file
-  Write-Host ''                                                                           # write Line spacer into Transcription file
-  Write-Host  "========================================================" 
-  Write-Host  "====== $Script:Now Processing Started ========" 
-  Write-Host  "========================================================" 
-  Write-Host  ''
-  
-  Write-Host ''                                                                           # write Line spacer into Transcription file
+    Stop-Transcript | Out-Null
+  } catch [System.InvalidOperationException] { }                                     # jobs are running
+  $ErrorActionPreference = "Continue"                                                # Set Error Action Handling
+  Get-Now                                                                            # Get current date time
+  Start-Transcript -path $Script:LogFile -IncludeInvocationHeader -Append            # Start Transcription append if log exists
+  Write-Host ''                                                                      # write Line spacer into Transcription file
+  Write-Host ''                                                                      # write Line spacer into Transcription file
+  Write-Host "================================================================================" 
+  Write-Host "================== $Script:Now Processing Started ====================" 
+  Write-Host "================================================================================"  
+  Write-Host ''
+
+  Write-Host ''                                                                       # write Line spacer into Transcription file
+}
+
+#& Display ScriptInfo
+Function Get-ScriptInfo{
+    
+  Write-Host "#==============================================================================="
+  Write-Host "# Name:             $Script:ScriptName"
+  Write-Host "# Version:          $Script:Version"
+  Write-Host "# GUID:             $Script:GUID"
+  Write-Host "# Description:"
+  Write-Host "# $Script:Desc"
+  Write-Host "# $Script:Desc2"
+  Write-Host "#-------------------------------------------------------------------------------"
+  Write-Host "# Log:              $Script:LogFile"
+  Write-Host "# Exports:          $Script:dest"
+  Write-Host "#==============================================================================="
+  Write-Host ""
+  Write-Host ""
+  Write-Host ""
 }
 
 #& Date time formatting for timestamped updated
@@ -247,6 +267,45 @@ Function Write-Reg{
   }
 }
 
+#& Test and load SCCM Module
+Function Test-SCCMModule{
+  Get-Now
+  Write-Host "$Script:Now [INFORMATION] Testing for SCCM Module"
+  # Import the ConfigurationManager.psd1 module
+  if($null -eq (Get-Module ConfigurationManager)) {
+    Get-Now
+    Write-Host "$Script:Now [INFORMATION] SCCM Module not loaded. Loading Module."
+    Try{
+      Import-Module "$($ENV:SMS_ADMIN_UI_PATH)\..\ConfigurationManager.psd1" @Script:initParams
+      Get-Now
+      Write-Host "$Script:Now [INFORMATION] SCCM Module has been loaded"
+    }
+    Catch{
+      #! Error handling for Module 
+      Get-Now
+      Write-Host "$Script:Now [Error] Unable to load SCCM Module" @cerror
+      Write-Host $PSItem.Exception.Message
+      Stop-Transcript
+      Break  
+    }
+    Finally{
+      $Error.Clear()                                                                     # Clear error log
+    }       
+  }
+  else{
+    Get-Now
+    Write-Host "$Script:Now [INFORMATION] SCCM Module already loaded."   
+  }
+}
+
+#& Test and connect to site drive
+Function Test-CMSiteDrive{
+Get-Now
+$CMSite="$(Get-PSDrive -PSProvider CMSite)`:"
+Write-Host "$Script:Now [INFORMATION] Setting Location to $Script:SiteCode" 
+Set-Location $CMSite
+}
+
 #-----------------------------------------------------------[Execution]------------------------------------------------------------
 <#
 ? ---------------------------------------------------------- [NOTES:] -------------------------------------------------------------
@@ -264,6 +323,7 @@ Function Write-Reg{
 
 # Script Execution goes here
 Start-Logging                                                                                       # Start Transcription logging
+Get-ScriptInfo                                                                          # Display Script Info
 Clear-TransLogs                                                                                     # Clear logs over 15 days old
 Test-ELog                                                                                           # Run function to test for PowerShell Automation Log
 
@@ -311,10 +371,10 @@ Get-Now
 Write-Output "$Script:Now [INFORMATION] Processing finished + any outputs"                          # Write Status Update to Transcription file
 
 Get-Now
-Write-Output  "========================================================" 
-Write-Output  "======== $Script:Now Processing Finished =========" 
-Write-Output  "========================================================"
+Write-Host "================================================================================"  
+Write-Host "================= $Script:Now Processing Finished ====================" 
+Write-Host "================================================================================" 
 
-Stop-Transcript                                                                                     # Stop transcription
+Stop-Transcript                                                                           # Stop transcription
 
 #---------------------------------------------------------[Execution Completed]----------------------------------------------------------
