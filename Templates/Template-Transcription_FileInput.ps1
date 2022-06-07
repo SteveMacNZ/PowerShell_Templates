@@ -24,7 +24,7 @@
   .\<scriptname>.ps1
   description of what the example does
 .EXAMPLE
-  .\<scriptname>.ps1
+  ^ .\<scriptname>.ps1
   description of what the example does 
 
 #>
