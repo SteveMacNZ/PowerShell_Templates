@@ -47,7 +47,7 @@ $ErrorActionPreference = 'SilentlyContinue'
 
 # Script sourced variables for General settings and Registry Operations
 $Script:Date        = Get-Date -Format yyyy-MM-dd                                   # Date format in yyyy-mm-dd
-$Script:File        = ''                                                            # File var for Get-FilePicker Function
+[System.IO.FileInfo]$Script:File  = ''                                              # File var for Get-FilePicker Function
 $Script:ScriptName  = 'Invoke-ScriptName'                                           # Script Name used in the Open Dialogue
 #$Script:dest        = $PSScriptRoot                                                 # Destination path - uncomment to use PS script root
 $Script:dest        = "$($env:ProgramData)\What\Path"                               # Destination Path - comment to use PS Script root
@@ -56,8 +56,8 @@ $Script:BatchName   = ''                                                        
 $Script:CSVFile     = $Script:dest + "\" + $Script:Date + "_" + $Script:ScriptName + "_.csv"   # CSV Export location and name
 $Script:Details     = Get-ComputerInfo                                              # Get Computer Info
 $Script:GUID        = ''                        # Script GUID
-    #^ Use New-Guid cmdlet to generate new script GUID for each version change of the script
-$Script:Version     = '0.0'                                                         # Script Version Number
+  #^ Use New-Guid cmdlet to generate new script GUID for each version change of the script
+[version]$Script:Version  = '0.0.0.0'                                               # Script Version Number
 $Script:Client      = ''                                                            # Set Client Name - Used in Registry Operations
 $Script:Operation   = 'Install'                                                     # Operations Feild for registry
 $Script:Source      = 'Script'                                                      # Source (Script / MSI / Scheduled Task etc)

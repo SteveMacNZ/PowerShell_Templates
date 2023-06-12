@@ -49,20 +49,21 @@ $Script:Date        = Get-Date -Format yyyy-MM-dd                               
 $Script:Now         = ''                                                            # script sourced veriable for Get-Now function
 $Script:dest        = $PSScriptRoot                                                 # Destination path
 $Script:LogDir      = $PSScriptRoot                                                 # Logdir for Clear-TransLogs function for $PSScript Root
-$Script:LogFile     = $Script:LogDir + $Script:Date + "_" + $env:USERNAME + "_" + $Script:ScriptName + ".log"    # logfile location and name
-$Script:File        = ''                                                            # File var for Get-FilePicker Function
+$Script:LogFile     = $Script:LogDir + "\" + $Script:Date + "_" + $env:USERNAME + "_" + $Script:ScriptName + ".log"    # logfile location and name
+[System.IO.FileInfo]$Script:File  = ''                                              # File var for Get-FilePicker Function
 $Script:ScriptName  = ''                                                            # Script Name used in the Open Dialogue
 $Script:BatchName   = ''                                                            # Batch name variable placeholder
 $Script:GUID        = '00000000-0000-0000-0000-000000000000'                        # Script GUID
   #^ Use New-Guid cmdlet to generate new script GUID for each version change of the script
-$Script:Version     = '0.0'                                                         # Script Version Number
+[version]$Script:Version  = '0.0.0.0'                                               # Script Version Number
 $Script:Client      = ''                                                            # Set Client Name - Used in Registry Operations
 $Script:WHO         = whoami                                                        # Collect WhoAmI
 $Script:Desc        = ""                                                            # Description displayed in Get-ScriptInfo function
 $Script:Desc2       = ""                                                            # Description2 displayed in Get-ScriptInfo function
 $Script:PSArchitecture = ''                                                         # Place holder for x86 / x64 bit detection
 
-#^ File Picker Setup
+#^ File Picker / Folder Picker Setup
+[System.IO.FileInfo]$Script:File  = ''                                              # File var for Get-FilePicker Function
 $Script:FPDir       = '$PSScriptRoot'                                               # File Picker Initial Directory
 $Script:FileTypes   = "Text files (*.txt)|*.txt|CSV File (*.csv)|*.csv|All files (*.*)|*.*" # File types to be listed in file picker
 $Script:FileIndex   = "2"                                                           # What file type to set as default in file picker (based on above order)
@@ -196,6 +197,112 @@ Function Get-PSArch{
 
   If ($Arch -eq 4){Write-Host "PowerShell is running the script as x86"; $Script:PSArchitecture = "x86 [32 bit]"}
   If ($Arch -eq 8){Write-Host "PowerShell is running the script as x64"; $Script:PSArchitecture = "x64 [64 bit]"}
+}
+
+function Show-ConsoleDialog{
+<#
+.SYNOPSIS
+  displays a console message with result returned into a switch statement
+.DESCRIPTION
+  displays a console message with result returned into a switch statement
+.PARAMETER Message
+  Message to be displayed
+.PARAMETER Title
+  Title of the dialogue message
+.PARAMETER Choice
+  choice options comma seperated    
+.INPUTS
+  None
+.OUTPUTS
+  returns result
+.NOTES
+  $result = Show-ConsoleDialog -Message 'Restarting Server?' -Title 'Will restart server for maintenance' -Choice 'Yes','Cancel' ,'Later','Never','Always'
+  switch ($result){
+  'Yes'        { 'restarting' }
+  'Cancel'     { 'doing nothing' }
+  'Later'      { 'ok, later' }
+  'Never'      { 'will not ask again' }
+  'Always'     { 'restarting without notice now and ever' }
+  }
+.LINK
+  None
+.EXAMPLE
+  ^ . Show-ConsoleDialog -Message "What you want to Do?" -Title "Question" -Choice 'Yes', 'No', 'Cancel', 'Abort'
+  shows console dialog message with options
+#>  
+  param(
+    [Parameter(Mandatory)]
+    [string]$Message,
+    [string]$Title = 'PowerShell',
+    # do not use choices with duplicate first letter
+    # submit any number of choices you want to offer
+    [string[]]
+    $Choice = ('Yes', 'No', 'Cancel')
+  )
+  
+  # turn choices into ChoiceDescription objects
+  $choices = foreach ($_ in $choice){
+    [System.Management.Automation.Host.ChoiceDescription]::new("&$_", $_)
+  }
+  
+  # translate the user choice into the name of the chosen choice
+  $choices[$host.ui.PromptForChoice($title, $message, $choices, 0)]. Label.Substring(1)
+}
+
+#& FolderPicker function for selecting a folder via explorer window
+Function Get-FolderPicker{
+# $Script:ISODir = Get-FolderPicker -InitialPath $Script:FPDir -Description "Select folder for ISO" 
+<#
+.SYNOPSIS
+  Displays folder picker, allowing user to select a folder
+.DESCRIPTION
+  Displays folder picker, allowing user to select a folder
+.PARAMETER InitialPath
+  Initial folder path to be displayed
+.PARAMETER Description
+  Description of what should be displayed   
+.INPUTS
+  None
+.OUTPUTS
+  returns selected folder
+.NOTES
+  $result = Show-ConsoleDialog -Message 'Restarting Server?' -Title 'Will restart server for maintenance' -Choice 'Yes','Cancel' ,'Later','Never','Always'
+  switch ($result){
+  'Yes'        { 'restarting' }
+  'Cancel'     { 'doing nothing' }
+  'Later'      { 'ok, later' }
+  'Never'      { 'will not ask again' }
+  'Always'     { 'restarting without notice now and ever' }
+  }
+.LINK
+  None
+.EXAMPLE
+  ^ . $Script:DestDir = Get-FolderPicker -InitialPath $Script:FPDir -Description "Select folder for destination" 
+  shows console dialog message with options
+#>
+
+  param (
+    #^ Description to use in the dialogue
+    [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
+    [String]
+    $InitialPath,
+    #^ Description to use in the dialogue
+    [Parameter(ValueFromPipeline=$true)]
+    [String]
+    $Description
+  )
+  
+  [System.Reflection.Assembly]::LoadWithPartialName("System.windows.forms")|Out-Null
+  $fdir = New-Object System.Windows.Forms.FolderBrowserDialog
+  $fdir.InitialDirectory    = $InitialPath
+  $fdir.ShowHiddenFiles     = $true
+  $fdir.ShowNewFolderButton = $true
+  $fdir.ShowPinnedPlaces    = $true
+  $fdir.Description         = $Description
+  $fdir.rootfolder          = "MyComputer"
+
+  if($fdir.ShowDialog() -eq "OK"){ $folder += $fdir.SelectedPath }
+  return $folder
 }
 
 #endregion
