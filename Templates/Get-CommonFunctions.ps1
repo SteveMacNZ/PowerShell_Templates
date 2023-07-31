@@ -47,11 +47,10 @@ Param (
 # Script sourced variables for General settings and Registry Operations
 $Script:Date        = Get-Date -Format yyyy-MM-dd                                   # Date format in yyyy-mm-dd
 $Script:Now         = ''                                                            # script sourced veriable for Get-Now function
+$Script:ScriptName  = ''                                                            # Script Name used in the Open Dialogue
 $Script:dest        = $PSScriptRoot                                                 # Destination path
 $Script:LogDir      = $PSScriptRoot                                                 # Logdir for Clear-TransLogs function for $PSScript Root
 $Script:LogFile     = $Script:LogDir + "\" + $Script:Date + "_" + $env:USERNAME + "_" + $Script:ScriptName + ".log"    # logfile location and name
-[System.IO.FileInfo]$Script:File  = ''                                              # File var for Get-FilePicker Function
-$Script:ScriptName  = ''                                                            # Script Name used in the Open Dialogue
 $Script:BatchName   = ''                                                            # Batch name variable placeholder
 $Script:GUID        = '00000000-0000-0000-0000-000000000000'                        # Script GUID
   #^ Use New-Guid cmdlet to generate new script GUID for each version change of the script
@@ -70,6 +69,7 @@ $Script:FileIndex   = "2"                                                       
 
 #endregion
 #region --------------------------------------------------------[Hash Tables]------------------------------------------------------
+
 #* Hash table for Write-Host Errors to be used as spatted
 $cerror = @{ForeGroundColor = "Red"; BackgroundColor = "white"}
 #* Hash table for Write-Host Warnings to be used as spatted
@@ -117,6 +117,52 @@ Function Get-Now{
   # .NET Call which is faster than PowerShell Method - comment out below if .NET is unavailable
   $Script:Now = ([DateTime]::Now).tostring("[dd/MM HH:mm:ss:ffff]")
 }
+
+#& Updated function for informational messages
+Function Write-InfoMsg ($message) {
+  Get-Now                                                                             # Get currnet date timestamp
+  Write-Host "$Script:Now [INFORMATION] $message"                                     # Display Information messge
+  $null = $Script:Now                                                                 # Reset timestamp
+}
+ 
+#& Updated function for informational highlighted messages
+Function Write-InfoHighlightedMsg ($message) {
+  Get-Now                                                                             # Get currnet date timestamp
+  Write-Host "$Script:Now [INFORMATION] $message" -ForegroundColor Cyan               # Display highlighted Information message
+  $null = $Script:Now                                                                 # Reset timestamp
+}
+
+#& Updated function for warning messages
+Function Write-WarningMsg ($message) {
+  Get-Now                                                                             # Get currnet date timestamp
+  Write-Host "$Script:Now [WARNING] $message" -ForegroundColor Yellow                 # Display Warning Message
+  $null = $Script:Now                                                                 # Reset timestamp
+}
+
+#& Updated function for Success messages
+Function Write-SuccessMsg ($message) {
+  Get-Now                                                                              # Get currnet date timestamp
+  Write-Host "$Script:Now [SUCCESS] $message" -ForegroundColor Green                   # Display Success Message
+  $null = $Script:Now                                                                  # Reset timestamp
+}
+
+#& Updated function for error messages
+Function Write-ErrorMsg ($message) {
+  Get-Now                                                                              # Get currnet date timestamp
+  Write-Host "$Script:Now [ERROR] $message" -ForegroundColor Red                       # Display Error Message
+  $null = $Script:Now                                                                  # Reset timestamp
+}
+
+#& Updated function for error and exit messages
+Function Write-ErrorAndExitMsg ($message) {
+  Get-Now                                                                                       # Get currnet date timestamp
+  Write-Host "$Script:Now [ERROR] $message" -ForegroundColor Red                                # Display Error Message
+  $null = $Script:Now                                                                           # Reset timestamp
+  Write-Host "Press enter to continue ..."                                                      # Display user prompt
+  Stop-Transcript                                                                               # Stop transcription
+  Read-Host | Out-Null                                                                          # Wait for user prompt
+  Exit                                                                                          # Terminte script }
+}  
 
 #& Clean up log files in script root older than 15 days
 Function Clear-TransLogs{
@@ -313,11 +359,13 @@ Function Get-FolderPicker{
 <#
 ? ---------------------------------------------------------- [NOTES:] -------------------------------------------------------------
 & Best veiwed and edited with Microsoft Visual Studio Code with colorful comments extension
-^ Transcription logging formatting use Get-Now before write-host to return current timestamp into $Scipt:Now variable
-  Write-Host "$Script:Now [INFORMATION] Information Message"
-  Write-Host "$Script:Now [INFORMATION] Highlighted Information Message" @chighlight
-  Write-Host "$Script:Now [WARNING] Warning Message" @cwarning
-  Write-Host "$Script:Now [ERROR] Error Message" @cerror
+^ Transcription logging formatting use the following functions to Write-Host messages
+  Write-InfoMsg "Message" writes informational message as Write-Host "$Script:Now [INFORMATION] Information Message" format
+  Write-InfoHighlightedMsg "Message" writes highlighted information message as Write-Host "$Script:Now [INFORMATION] Highlighted Information Message" format
+  Write-SuccessMsg "Message" writes success message as Write-Host "$Script:Now [SUCCESS] Warning Message" format"
+  Write-WarningMsg "Message" writes warning message as Write-Host "$Script:Now [WARNING] Warning Message" format
+  Write-ErrorMsg "Message" writes error message as Write-Host "$Script:Now [ERROR] Error Message" format
+  Write-ErrorAndExitMsg "Message" writes error message as Write-Host "$Script:Now [ERROR] Error Message" format and exits script
 ? ---------------------------------------------------------------------------------------------------------------------------------
 #>
 
