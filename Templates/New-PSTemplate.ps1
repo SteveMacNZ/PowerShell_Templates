@@ -1,3 +1,4 @@
+#region ------------------------------------------------------[Synopsis]--------------------------------------------------
 <#
 .SYNOPSIS
   what does this script do?
@@ -22,6 +23,7 @@
   Invoke-What.ps1
 
 #>
+#endregion
 
 #requires -version 4
 #region ------------------------------------------------------[Script Parameters]--------------------------------------------------
@@ -40,7 +42,7 @@ Param (
 #Import-Module ActiveDirectory
 
 #& Includes - Scripts & Modules
-. Get-CommonFunctions.ps1                                 # Include Common Functions
+. .\Get-CommonFunctions.ps1                                                         # Include Common Functions
 
 #endregion
 #region -------------------------------------------------------[Declarations]------------------------------------------------------
@@ -142,13 +144,15 @@ $maximum = $What.Count  # number of items to be processed
 Write-InfoHighlightedMsg "$maximum What Objects found"
 Write-Host ""
 Foreach ($W in $What)  {
+  Write-Host ""
+  # Display progress bar if more than 1 record
+  If ($maximum -gt 1){
+    $counter++
+    $percentCompleted = $counter * 100 / $maximum
+    $message = '{0:p1} completed, processing {1}.' -f ( $percentCompleted/100), $W.Value
+    Write-Progress -Activity 'I am busy' -Status $message -PercentComplete $percentCompleted
+  }
   
-  $counter++
-  $percentCompleted = $counter * 100 / $maximum
-
-  $message = '{0:p1} completed, processing {1}.' -f ( $percentCompleted/100), $W.Value
-  Write-Progress -Activity 'I am busy' -Status $message -PercentComplete $percentCompleted
-
   Write-InfoMsg "processing what for $($W.Value)"
 
   # doing stuff here
@@ -170,6 +174,9 @@ Foreach ($W in $What)  {
 
   ("$WhatString","$WhatINT","$WhatBool",$AnyOtherVarsThatNeedtobeCleared) = $null
 
+  Write-Host ""
+  Write-Host "---------------------- $counter of $maximum processed ----------------------"
+  Write-Host ""
 }
 
 $ClassReport = $Script:dest + "\" + $Script:Date + "_ClassReport.csv"
@@ -208,3 +215,9 @@ Write-Host "====================================================================
 Stop-Transcript
 #endregion
 #---------------------------------------------------------[Execution Completed]----------------------------------------------------------
+#region ------------------------------------------------------[ExtendedHelp]--------------------------------------------------
+<#
+^ Enter any extended help items here: (e.g., detailed help on functions, commented code blocks so they sit outside of the main script logic)
+
+#>
+#endregion
