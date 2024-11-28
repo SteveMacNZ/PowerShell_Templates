@@ -20,6 +20,7 @@
 */
 
 // ------------------------------------------------------[Script Parameters]--------------------------------------------------
+/*
 @description('What for what')
 param astring string = 'Default Value'                                // comment on parameter
 
@@ -45,16 +46,17 @@ example: Storage account name restrictions:
 @minLength(3)
 @maxLength(24)
 param storageAccountName string
-
+*/
 // -------------------------------------------------------[Declarations]------------------------------------------------------
-
+/*
 var variablename1 = 'var-value'                                       // comment for variable purpose
 var variablename2 = 'var-value'                                       // comment for variable purpose
 var variablename3 = 'var-value'                                       // comment for variable purpose
 var variablename4 = 'var-value'                                       // comment for variable purpose
+*/
 
 // --------------------------------------------------------[Modules]----------------------------------------------------------
-
+/*
 // Comment for Module
 module modname './pathtobicep.bicep' = {
   name: 'name'
@@ -63,6 +65,7 @@ module modname './pathtobicep.bicep' = {
     pramname2: 'value'
   }
 }
+*/
 
 // ----------------------------------------------------------[What]------------------------------------------------------------
 
